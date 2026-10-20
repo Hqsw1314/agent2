@@ -1,0 +1,15 @@
+# LLM 配置：与项目1 (Code Review Agent) 保持一致，使用阿里云 DashScope 的
+# OpenAI 兼容接口 + qwen-plus 模型。
+#
+# 使用真实 LLM：
+#   1) 复制本文件为 config.yaml（已被 .gitignore 排除）
+#   2) 在 .env 中配置 DASHSCOPE_API_KEY（参考 .env.example）
+# 未检测到 API Key 时自动降级为离线演示模式（MockLLM），流程照常跑通。
+
+llm:
+  provider: auto            # auto / openai_compat / mock
+  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  model: qwen-plus
+  api_key_env: DASHSCOPE_API_KEY
+  temperature: 0.4
+  timeout: 60
