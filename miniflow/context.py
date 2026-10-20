@@ -101,7 +101,7 @@ class WorkflowContext:
         with self._lock:
             self.messages.append(msg)
         self.log("message", sender,
-                 "MSG {} -> {} [{}]: {}".format(sender, receiver, mtype, content))
+                 "{} -> {} [{}]: {}".format(sender, receiver, mtype, content))
         return msg
 
     def messages_for(self, agent_name: str) -> List[Message]:

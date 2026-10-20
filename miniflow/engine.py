@@ -90,20 +90,20 @@ class WorkflowEngine:
             raise WorkflowError("存在重复的步骤 id")
         self.start = wf.get("start") or wf["steps"][0]["id"]
         self.out_dir = out_dir
+        self.llm = llm
         self.agents = agents if agents is not None else self._load_agents(wf.get("agents") or {})
 
     # ---------- Agent 注册表 ----------
-    @staticmethod
-    def _load_agents(mapping: dict) -> dict:
+    def _load_agents(self, mapping: dict) -> dict:
         """agents 映射: id -> '包.模块.类名' 字符串（也可直接传实例，便于测试）。"""
         agents = {}
         for key, target in mapping.items():
             if isinstance(target, str):
                 mod_name, cls_name = target.rsplit(".", 1)
                 cls = getattr(importlib.import_module(mod_name), cls_name)
-                agents[key] = cls
+                agents[key] = cls(self.llm)  # 注册表存类路径, 加载时实例化
             else:
-                agents[key] = target
+                agents[key] = target  # 允许直接传实例(便于测试)
         return agents
 
     # ---------- 主循环 ----------

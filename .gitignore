@@ -10,7 +10,7 @@ venv/
 config.yaml
 
 # 运行时产物
-outputs/
+outputs*/
 *.log
 
 # IDE / 系统
