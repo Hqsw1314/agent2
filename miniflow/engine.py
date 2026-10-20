@@ -74,6 +74,18 @@ def eval_when(expr: str, ctx: WorkflowContext) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# inputs 解析: 值以 "$" 开头 => 上下文路径引用(如 $review.passed), 否则视为字面量
+# ---------------------------------------------------------------------------
+
+def _resolve_inputs(step_inputs, ctx: WorkflowContext) -> dict:
+    resolved = {}
+    for key, raw in (step_inputs or {}).items():
+        text = str(raw)
+        resolved[key] = ctx.resolve(text[1:]) if text.startswith("$") else raw
+    return resolved
+
+
+# ---------------------------------------------------------------------------
 # 引擎
 # ---------------------------------------------------------------------------
 
@@ -165,8 +177,7 @@ class WorkflowEngine:
                 ctx.log("step_end", sid, "(路由节点, 跳过执行)")
             else:
                 agent = self._agent_of(sid, agent_key)
-                inputs = {k: ctx.resolve(str(v))
-                          for k, v in (step.get("inputs") or {}).items()}
+                inputs = _resolve_inputs(step.get("inputs"), ctx)
                 ctx.log("step_start", sid, "{} 开始执行, 输入: {}".format(
                     agent.name, ", ".join(inputs.keys()) or "(无)"))
                 t0 = time.time()
@@ -215,7 +226,7 @@ class WorkflowEngine:
 
         def worker(sub):
             agent = self._agent_of(sub["id"], sub.get("agent"))
-            inputs = {k: ctx.resolve(str(v)) for k, v in (sub.get("inputs") or {}).items()}
+            inputs = _resolve_inputs(sub.get("inputs"), ctx)
             ctx.log("step_start", sub["id"], "{} 开始执行(并行)".format(agent.name))
             t0 = time.time()
             result = self._execute_with_retry(sub, agent, ctx, inputs)
