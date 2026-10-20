@@ -1,0 +1,68 @@
+# Mini SE 流程工作流定义（HW2 主流程）
+#
+# 流程: 需求 -> 设计 -> 编码 -> 审查 ->(通过)-> 交付
+#                                  \->(不通过)-> 修复 -> 审查（循环，最多4轮）
+#
+# steps 字段说明:
+#   id:         步骤唯一标识
+#   agent:      agents 表中注册的 Agent
+#   inputs:     参数名 -> 上下文路径（点号路径，如 review.passed）
+#   output:     返回值写入上下文的键（下游用路径引用）
+#   next:       默认下一步；缺省表示流程结束
+#   branches:   条件分支，按序求值，第一个满足的生效
+#   max_visits: 循环保护，超过即判定死循环并报错
+#   retries:    步骤级失败重试次数（默认继承全局 retries: 2）
+
+name: mini-se-workflow
+description: "Mini SE流程: 需求 -> 设计 -> 编码 -> 审查 -> (修复循环) -> 交付"
+max_steps: 60
+retries: 2
+
+agents:
+  requirement: miniflow.agents.requirement.RequirementAgent
+  design: miniflow.agents.design.DesignAgent
+  coding: miniflow.agents.coding.CodingAgent
+  review: miniflow.agents.review.ReviewAgent
+  fix: miniflow.agents.fix.FixAgent
+  deliver: miniflow.agents.deliver.DeliverAgent
+
+steps:
+  - id: requirement
+    agent: requirement
+    inputs: {topic: topic}
+    output: requirements
+    next: design
+
+  - id: design
+    agent: design
+    inputs: {requirements: requirements}
+    output: design
+    next: coding
+
+  - id: coding
+    agent: coding
+    inputs: {requirements: requirements, design: design}
+    output: code
+    next: review
+
+  - id: review
+    agent: review
+    inputs: {requirements: requirements, code: code, fix_round: fix_round}
+    output: review
+    next: fix                       # 默认: 未通过 -> 修复
+    max_visits: 6
+    branches:
+      - when: "review.passed == true"
+        next: deliver
+
+  - id: fix
+    agent: fix
+    inputs: {code: code, review: review, fix_round: fix_round}
+    output: code                    # 覆盖上下文中的 code
+    next: review
+    max_visits: 4
+
+  - id: deliver
+    agent: deliver
+    inputs: {requirements: requirements, design: design, code: code, review: review}
+    output: final_report            # next 缺省 => 流程结束

@@ -1,0 +1,38 @@
+# 并行执行示例：前端/后端两个编码节点并发工作后汇合交付。
+#
+# 运行: py -3 main.py --workflow examples/parallel_example.yaml --out-dir outputs_parallel
+
+name: parallel-coding-demo
+description: "并行示例: 需求 -> (前端编码 ∥ 后端编码) -> 交付"
+max_steps: 20
+
+agents:
+  requirement: miniflow.agents.requirement.RequirementAgent
+  coding_fe: miniflow.agents.coding.FrontendCodingAgent
+  coding_be: miniflow.agents.coding.BackendCodingAgent
+  deliver: miniflow.agents.deliver.DeliverAgent
+
+steps:
+  - id: requirement
+    agent: requirement
+    inputs: {topic: topic}
+    output: requirements
+    next: coding_parallel
+
+  - id: coding_parallel
+    type: parallel                  # 并行步骤: 子步骤并发执行, 全部完成后汇合
+    parallel:
+      - id: coding_frontend
+        agent: coding_fe
+        inputs: {requirements: requirements}
+        output: code_frontend
+      - id: coding_backend
+        agent: coding_be
+        inputs: {requirements: requirements}
+        output: code_backend
+    next: deliver
+
+  - id: deliver
+    agent: deliver
+    inputs: {requirements: requirements, code_frontend: code_frontend, code_backend: code_backend}
+    output: final_report
